@@ -14,7 +14,7 @@ import java.util.ListIterator;
 
 // TODO: checkstyle
 public class Controller {
-    public static final boolean DEBUG = true; // TODO: turn off
+    public static final boolean DEBUG = false; // TODO: turn off
     public static final boolean DEBUG_REDIR_OUTPUT = DEBUG && true;
     public static final boolean DEBUG_DIRECTION = DEBUG && false;
     public static final boolean DEBUG_PEOPLEOUT = DEBUG && false;
