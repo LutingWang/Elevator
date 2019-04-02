@@ -26,7 +26,7 @@ public class Input implements Runnable {
             if (request == null) {
                 break;
             } else {
-                Controller.getInstance().newRequest(request);
+                Controller.newRequest(request);
             }
             if (Controller.DEBUG) {
                 System.out.println(">>>Input");
@@ -37,6 +37,6 @@ public class Input implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        Controller.getInstance().inputDied();
+        Controller.setInputAlive(false);
     }
 }

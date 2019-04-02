@@ -1,13 +1,14 @@
 package model;
 
 import com.oocourse.elevator1.PersonRequest;
+import controller.AutoStart;
 import controller.MyExceptionHandler;
 
 import java.util.ArrayList;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Stream;
 
-public abstract class People implements Runnable {
+public abstract class People implements AutoStart {
     private final ArrayList<PersonRequest> people = new ArrayList<>();
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     
@@ -43,8 +44,8 @@ public abstract class People implements Runnable {
     
     protected Thread start(String name) {
         Thread thread = new Thread(this, name);
-        thread.setDaemon(true);
         thread.setUncaughtExceptionHandler(new MyExceptionHandler());
+        thread.setDaemon(true);
         thread.start();
         return thread;
     }
