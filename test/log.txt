@@ -1,0 +1,3 @@
+2019-04-02 21:34:30     
+Check Pass!	Your input is valid, base time is 11, max time is 16
+ 
