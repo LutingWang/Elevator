@@ -139,6 +139,8 @@ public class Elevator implements AutoStart {
                 if (temp == Dir.STOP) {
                     statusLock.writeLock().lock();
                     if (status == Status.NULL) {
+                        status = Status.RUNNING; // any status but null
+                        running.signalAll();
                         noDirection.signalAll();
                     } else if (status == Status.RUNNING) {
                         running.signalAll();
@@ -152,7 +154,9 @@ public class Elevator implements AutoStart {
                     } else if (temp == Dir.DOWN) {
                         floorCache = floor - 1;
                     }
-                    signalAll("noDirection");
+                    if (status == Status.NULL) {
+                        signalAll("noDirection");
+                    }
                 }
                 attrLock.lock();
                 stopCache.cache();
@@ -188,6 +192,7 @@ public class Elevator implements AutoStart {
         switch (conditionName) {
             case "noDirection":
                 statusLock.writeLock().lock();
+                status = Status.RUNNING;
                 noDirection.signalAll();
                 statusLock.writeLock().unlock();
                 break;
@@ -211,7 +216,12 @@ public class Elevator implements AutoStart {
                 Dir temp = manager.getDir();
                 if (temp == Dir.NULL) {
                     status = Status.NULL;
-                    noDirection.await();
+                    running.await(Controller.ELEVATOR_SPEED,
+                            TimeUnit.MILLISECONDS);
+                    if (status == Status.NULL) {
+                        noDirection.await();
+                    }
+                    status = Status.NULL;
                 } else {
                     if (temp == Dir.UP) {
                         floor++;
