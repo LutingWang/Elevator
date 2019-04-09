@@ -1,5 +1,6 @@
 package view;
 
+import com.oocourse.TimableOutput;
 import com.oocourse.elevator2.ElevatorInput;
 import com.oocourse.elevator2.PersonRequest;
 import controller.Controller;
@@ -30,7 +31,7 @@ public class Input implements Runnable {
                 Controller.newPerson(new Person(request));
             }
             if (Controller.DEBUG) {
-                System.out.println(">>>input " + request);
+                TimableOutput.println(">>>input " + request);
             }
         }
         try {

@@ -3,7 +3,6 @@ package model;
 import controller.Controller;
 import controller.Tools;
 
-import java.util.OptionalDouble;
 import java.util.OptionalInt;
 
 class Manager {
@@ -66,21 +65,15 @@ class Manager {
                 .map(Manager::floorDiffComp)
                 .reduce(Integer::sum);
         out.getLock().readLock().unlock();
-        if (cost.isPresent()) { // out still has people
-            if (cost.getAsInt() >= 0) {
-                return Dir.UP;
-            } else {
-                return Dir.DOWN;
-            }
-        }
+        cost = Tools.mult(cost, Controller.OUT_AMPL);
         in.getLock().readLock().lock();
-        cost = in.stream()
+        cost = Tools.add(cost, in.stream()
                 .mapToInt(Person::getToFloor)
                 .filter(f -> f != floor)
                 .distinct()
                 .map(f -> f - floor)
                 .map(Manager::floorDiffComp)
-                .reduce(Integer::sum);
+                .reduce(Integer::sum));
         in.getLock().readLock().unlock();
         if (cost.isPresent()) {
             if (cost.getAsInt() >= 0) {

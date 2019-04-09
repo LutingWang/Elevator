@@ -23,8 +23,9 @@ public class Controller {
     public static final int ELEVATOR_NUM = 1;
     public static final int ELEVATOR_SPEED = 400; // milli-sec per floor
     public static final int ELEVATOR_DOOR_TIME = 400; // open and close
-    //public static final int ELEVATOR_OPEN_TIME = 200;
-    //public static final int ELEVATOR_CLOSE_TIME = 200;
+    // public static final int ELEVATOR_OPEN_TIME = 200;
+    // public static final int ELEVATOR_CLOSE_TIME = 200;
+    public static final int OUT_AMPL = 2; // out crowd is twice important as in
     
     public static final int TOTAL_FLOORS = FLOORS.size();
     private static final People out = new People();

@@ -80,14 +80,16 @@ public class Elevator implements AutoStart {
         private final RedefinableAttr<Dir> dirCache
                 = new RedefinableAttr<>(() ->  {
                     if (Controller.DEBUG) {
-                        System.out.println("at " + floor + " dirCache: " + direction(floor));
+                        System.out.println("at " + floor
+                                + " dirCache: " + direction(floor));
                     }
                     return direction(floor);
                 });
         private final RedefinableAttr<Boolean> stopCache
                 = new RedefinableAttr<>(() -> {
                     if (Controller.DEBUG) {
-                        System.out.println("at " + floor + " stopCache: " + stop(floorCache));
+                        System.out.println("at " + floor
+                                + " stopCache: " + stop(floorCache));
                     }
                     return stop(floorCache);
                 });

@@ -28,6 +28,13 @@ public class Tools {
         return Arrays.stream(ops).reduce(Tools::add).get();
     }
     
+    public static OptionalInt mult(OptionalInt a, int times) {
+        if (a.isPresent()) {
+            return OptionalInt.of(a.getAsInt() * times);
+        }
+        return OptionalInt.empty();
+    }
+    
     public static void threadMonitor() {
         if (Controller.DEBUG) {
             System.out.println("Thread " +
