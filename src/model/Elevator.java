@@ -29,7 +29,8 @@ public class Elevator implements AutoStart {
         public void run() {
             while (true) {
                 statusLock.readLock().lock();
-                while (status != Status.OPEN || manager.dirCache.peek() != Dir.STOP) {
+                while (status != Status.OPEN
+                        || manager.dirCache.peek() != Dir.STOP) {
                     statusLock.readLock().unlock();
                     statusLock.writeLock().lock();
                     try {

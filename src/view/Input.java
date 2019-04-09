@@ -1,6 +1,5 @@
 package view;
 
-import com.oocourse.TimableOutput;
 import com.oocourse.elevator2.ElevatorInput;
 import com.oocourse.elevator2.PersonRequest;
 import controller.Controller;

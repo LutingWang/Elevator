@@ -1,7 +1,5 @@
 package controller;
 
-import com.oocourse.TimableOutput;
-
 import java.util.Arrays;
 import java.util.OptionalInt;
 
@@ -30,19 +28,10 @@ public class Tools {
         return Arrays.stream(ops).reduce(Tools::add).get();
     }
     
-    public static void sleep(long millis) {
-        try {
-            Thread.sleep(millis);
-        } catch (InterruptedException e) {
-            if (Controller.DEBUG) {
-                e.printStackTrace();
-            }
-        }
-    }
-    
     public static void threadMonitor() {
         if (Controller.DEBUG) {
-            System.out.println("Thread " + Thread.currentThread().getName() + " awaking");
+            System.out.println("Thread " +
+                    Thread.currentThread().getName() + " awaking");
         }
     }
 }

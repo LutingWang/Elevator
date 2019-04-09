@@ -14,11 +14,11 @@ public class People {
         return lock;
     }
     
-    public Stream<Person> stream() {
+    Stream<Person> stream() {
         return people.stream();
     }
     
-    public ArrayList<Person> getPeople(Predicate<Person> fun) {
+    ArrayList<Person> getPeople(Predicate<Person> fun) {
         ArrayList<Person> result = new ArrayList<>();
         Person pr;
         lock.writeLock().lock();

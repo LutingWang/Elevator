@@ -21,7 +21,7 @@ public class Person {
         return fromFloor;
     }
     
-    public boolean from(int floor) {
+    boolean from(int floor) {
         return fromFloor == floor;
     }
     
@@ -29,7 +29,7 @@ public class Person {
         return toFloor;
     }
     
-    public boolean to(int floor) {
+    boolean to(int floor) {
         return toFloor == floor;
     }
     
