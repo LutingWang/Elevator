@@ -1,8 +1,10 @@
 package view;
 
 import com.oocourse.TimableOutput;
-import com.oocourse.elevator1.PersonRequest;
 import model.Elevator;
+import model.Person;
+
+import static controller.Controller.FLOORS;
 
 public class Output {
     public static void init() {
@@ -10,23 +12,23 @@ public class Output {
     }
     
     public static void in(int id, int floor) {
-        TimableOutput.println("IN-" + id + "-" + floor);
+        TimableOutput.println("IN-" + id + "-" + FLOORS.get(floor));
     }
     
-    public static void in(PersonRequest personRequest) {
-        in(personRequest.getPersonId(), personRequest.getFromFloor());
+    public static void in(Person person) {
+        in(person.getPersonId(), person.getFromFloor());
     }
     
     public static void out(int id, int floor) {
-        TimableOutput.println("OUT-" + id + "-" + floor);
+        TimableOutput.println("OUT-" + id + "-" + FLOORS.get(floor));
     }
     
-    public static void out(PersonRequest personRequest) {
-        out(personRequest.getPersonId(), personRequest.getToFloor());
+    public static void out(Person person) {
+        out(person.getPersonId(), person.getToFloor());
     }
     
     public static void open(int floor) {
-        TimableOutput.println("OPEN-" + floor);
+        TimableOutput.println("OPEN-" + FLOORS.get(floor));
     }
     
     public static void open(Elevator elevator) {
@@ -34,10 +36,14 @@ public class Output {
     }
     
     public static void close(int floor) {
-        TimableOutput.println("CLOSE-" + floor);
+        TimableOutput.println("CLOSE-" + FLOORS.get(floor));
     }
     
     public static void close(Elevator elevator) {
         close(elevator.getFloor());
+    }
+    
+    public static void arrive(int floor) {
+        TimableOutput.println("ARRIVE-" + FLOORS.get(floor));
     }
 }

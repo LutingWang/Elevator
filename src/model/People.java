@@ -1,33 +1,46 @@
 package model;
 
-import com.oocourse.elevator1.PersonRequest;
-import controller.AutoStart;
-import controller.MyExceptionHandler;
-
 import java.util.ArrayList;
+import java.util.ListIterator;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
-public abstract class People implements AutoStart {
-    private final ArrayList<PersonRequest> people = new ArrayList<>();
+public class People {
+    private final ArrayList<Person> people = new ArrayList<>();
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     
     public ReentrantReadWriteLock getLock() {
         return lock;
     }
     
-    public Stream<PersonRequest> stream() {
+    public Stream<Person> stream() {
         return people.stream();
     }
     
-    protected ArrayList<PersonRequest> getPeople() {
-        return people;
-    }
-    
-    public void addPersonRequest(PersonRequest personRequest) {
+    public ArrayList<Person> getPeople(Predicate<Person> fun) {
+        ArrayList<Person> result = new ArrayList<>();
+        Person pr;
         lock.writeLock().lock();
         try {
-            people.add(personRequest);
+            ListIterator<Person> li = people.listIterator();
+            while (li.hasNext()) {
+                pr = li.next();
+                if (fun.test(pr)) {
+                    li.remove();
+                    result.add(pr);
+                }
+            }
+            return result;
+        } finally {
+            lock.writeLock().unlock();
+        }
+    }
+    
+    public void addPerson(Person person) {
+        lock.writeLock().lock();
+        try {
+            people.add(person);
         } finally {
             lock.writeLock().unlock();
         }
@@ -42,11 +55,8 @@ public abstract class People implements AutoStart {
         }
     }
     
-    protected Thread start(String name) {
-        Thread thread = new Thread(this, name);
-        thread.setUncaughtExceptionHandler(new MyExceptionHandler());
-        thread.setDaemon(true);
-        thread.start();
-        return thread;
+    @Override
+    public String toString() {
+        return people.toString();
     }
 }

@@ -1,130 +1,64 @@
 package model;
 
-import com.oocourse.elevator1.PersonRequest;
 import controller.AutoStart;
 import controller.Controller;
-import controller.Manager;
 import controller.MyExceptionHandler;
 import controller.Tools;
 import view.Output;
 
 import java.util.ArrayList;
-import java.util.ListIterator;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Elevator implements AutoStart {
-    private static final ArrayList<Elevator> elevators = new ArrayList<>();
+    public static final ArrayList<Elevator> elevators = new ArrayList<>();
     
     private int floor = Controller.ELEVATOR_INIT_POS;
     private Status status = Status.NULL;
     private final ReentrantReadWriteLock statusLock
             = new ReentrantReadWriteLock();
+    private final Condition doorClosed = statusLock.writeLock().newCondition();
+    private final Condition doorOpen = statusLock.writeLock().newCondition();
+    private final Condition noDirection = statusLock.writeLock().newCondition();
+    private final Condition running = statusLock.writeLock().newCondition();
     
-    private final class PeopleIn extends People {
-        boolean requestOut() {
-            getLock().readLock().lock();
-            try {
-                return stream()
-                        .anyMatch(pr -> pr.getToFloor() == floor);
-            } finally {
-                getLock().readLock().unlock();
-            }
-        }
-        
+    private final class PeopleIn extends People implements AutoStart {
         @Override
         public void run() {
             while (true) {
-                // using lock to save efficiency
                 statusLock.readLock().lock();
-                if (status != Status.OPEN) {
+                while (status != Status.OPEN || manager.dirCache.peek() != Dir.STOP) {
                     statusLock.readLock().unlock();
-                    continue;
-                }
-                getLock().writeLock().lock();
-                ListIterator<PersonRequest> li = getPeople().listIterator();
-                while (li.hasNext()) {
-                    PersonRequest personRequest = li.next();
-                    if (personRequest.getToFloor() != floor) {
-                        continue;
-                    }
-                    li.remove();
-                    Output.out(personRequest);
-                }
-                getLock().writeLock().unlock();
-                statusLock.readLock().unlock();
-            }
-        }
-        
-        public Thread start() {
-            return super.start("people in " + getName());
-        }
-    }
-    
-    private final PeopleIn in;
-    private final ReentrantReadWriteLock peopleInLock;
-    
-    private final class ElevatorController
-            extends Controller implements AutoStart {
-        private final Manager manager;
-        private Boolean stop = null;
-        private ReentrantReadWriteLock stopLock = new ReentrantReadWriteLock();
-        private Status status = null;
-        private ReentrantReadWriteLock statusLock
-                = new ReentrantReadWriteLock();
-        
-        ElevatorController(People in) {
-            manager = new Manager(in);
-        }
-        
-        boolean requestStop() {
-            stopLock.writeLock().lock();
-            try {
-                if (stop == null) {
-                    stop = in.requestOut() || Controller.requestStop(floor);
-                }
-                return stop;
-            } finally {
-                stop = null;
-                stopLock.writeLock().unlock();
-            }
-        }
-        
-        Status nextStatus() {
-            statusLock.writeLock().lock();
-            try {
-                if (status == null) {
-                    status = manager.dirction(floor);
-                }
-                return status;
-            } finally {
-                status = null;
-                statusLock.writeLock().unlock();
-            }
-        }
-        
-        @Override
-        public void run() {
-            while (true) {
-                if (stop == null) {
-                    stopLock.writeLock().lock();
-                    stop = in.requestOut() || Controller.requestStop(floor);
-                    stopLock.writeLock().unlock();
-                } else {
-                    stop = in.requestOut() || Controller.requestStop(floor);
-                }
-                if (status == null) {
                     statusLock.writeLock().lock();
-                    status = manager.dirction(floor);
-                    statusLock.writeLock().unlock();
-                } else {
-                    status = manager.dirction(floor);
+                    try {
+                        doorClosed.await();
+                        Tools.threadMonitor();
+                        statusLock.readLock().lock();
+                    } catch (InterruptedException e) {
+                        if (Controller.DEBUG) {
+                            e.printStackTrace();
+                        }
+                    } finally {
+                        statusLock.writeLock().unlock();
+                    }
                 }
+                in.getPeople(person -> person.to(floor))
+                        .forEach(Output::out);
+                Controller.getOut()
+                        .getPeople(person -> person.from(floor))
+                        .forEach(person -> {
+                            Output.in(person);
+                            in.addPerson(person);
+                        });
+                statusLock.readLock().unlock();
+                manager.refresh();
             }
         }
         
-        @Override
         public Thread start() {
-            Thread thread = new Thread(this, "controller of " + getName());
+            Thread thread = new Thread(this, "people in " + getName());
             thread.setUncaughtExceptionHandler(new MyExceptionHandler());
             thread.setDaemon(true);
             thread.start();
@@ -132,101 +66,179 @@ public class Elevator implements AutoStart {
         }
     }
     
-    private final ElevatorController controller;
+    private final PeopleIn in = new PeopleIn();
     
-    public static ArrayList<Elevator> getElevators() {
-        return elevators;
+    private final class SubManager extends Manager implements AutoStart {
+        private int floorCache = floor;
+        private final RedefinableAttr<Dir> dirCache
+                = new RedefinableAttr<>(() ->  {
+                    if (Controller.DEBUG) {
+                        System.out.println("dirCache: " + direction(floor));
+                    }
+                    return direction(floor);
+                });
+        private final RedefinableAttr<Boolean> stopCache
+                = new RedefinableAttr<>(() -> {
+                    if (Controller.DEBUG) {
+                        System.out.println("stopCache: " + stop(floorCache));
+                    }
+                    return stop(floorCache);
+                });
+        private final ReentrantLock attrLock = new ReentrantLock();
+        private final Condition notNull = attrLock.newCondition();
+        
+        SubManager() {
+            super(in);
+        }
+        
+        Dir getDir() {
+            attrLock.lock();
+            try {
+                return dirCache.get();
+            } finally {
+                attrLock.unlock();
+            }
+        }
+        
+        Boolean getStop() {
+            attrLock.lock();
+            try {
+                return stopCache.get();
+            } finally {
+                attrLock.unlock();
+            }
+        }
+        
+        void refresh() {
+            attrLock.lock();
+            try {
+                dirCache.cache();
+                stopCache.cache();
+            } finally {
+                attrLock.unlock();
+            }
+        }
+        
+        @Override
+        public void run() {
+            while (true) {
+                attrLock.lock();
+                if (dirCache.isPresent() && stopCache.isPresent()) {
+                    try {
+                        notNull.await();
+                        Tools.threadMonitor();
+                    } catch (InterruptedException e) {
+                        if (Controller.DEBUG) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+                Dir temp = dirCache.cache();
+                attrLock.unlock();
+                if (temp == Dir.STOP) {
+                    statusLock.writeLock().lock();
+                    if (status == Status.NULL) {
+                        noDirection.signalAll();
+                    } else if (status == Status.RUNNING) {
+                        running.signalAll();
+                    } else { // status == Status.OPEN
+                        doorClosed.signalAll();
+                    }
+                    statusLock.writeLock().unlock();
+                } else if (temp != Dir.NULL) {
+                    if (temp == Dir.UP) {
+                        floorCache = floor + 1;
+                    } else if (temp == Dir.DOWN) {
+                        floorCache = floor - 1;
+                    }
+                    signalAll("noDirection");
+                }
+                attrLock.lock();
+                stopCache.cache();
+                attrLock.unlock();
+            }
+        }
+    
+        @Override
+        public Thread start() {
+            Thread thread = new Thread(this, "sub-manager " + getName());
+            thread.setUncaughtExceptionHandler(new MyExceptionHandler());
+            thread.setDaemon(true);
+            thread.start();
+            return thread;
+        }
     }
+    
+    private final SubManager manager = new SubManager();
     
     public Elevator() {
         elevators.add(this);
-        in = new PeopleIn();
-        peopleInLock = in.getLock();
-        controller = new ElevatorController(in);
     }
     
-    public boolean inStatus(Status status) {
-        statusLock.readLock().lock();
-        try {
-            return this.status == status;
-        } finally {
-            statusLock.readLock().unlock();
-        }
-    }
-    
-    private void setStatus(Status status) {
-        statusLock.writeLock().lock();
-        try {
-            this.status = status;
-        } finally {
-            statusLock.writeLock().unlock();
-        }
-    }
-    
-    public ReentrantReadWriteLock getStatusLock() {
-        return statusLock;
-    }
-    
-    public int getNum() {
-        return elevators.indexOf(this);
-    }
-    
-    public String getName() {
-        return "elevator #" + getNum();
+    private String getName() {
+        return "elevator #" + elevators.indexOf(this);
     }
     
     public int getFloor() {
-        assert status == Status.OPEN || status == Status.NULL;
         return floor;
     }
     
-    public People getPeopleIn() {
-        return in;
-    }
-    
-    public ReentrantReadWriteLock getPeopleInLock() {
-        return peopleInLock;
-    }
-    
-    public void getIn(PersonRequest personRequest) {
-        in.addPersonRequest(personRequest);
-        Output.in(personRequest);
+    public void signalAll(String conditionName) {
+        switch (conditionName) {
+            case "noDirection":
+                statusLock.writeLock().lock();
+                noDirection.signalAll();
+                statusLock.writeLock().unlock();
+                break;
+            case "notNull":
+                manager.attrLock.lock();
+                manager.notNull.signalAll();
+                manager.attrLock.unlock();
+                break;
+            default:
+                throw new RuntimeException();
+        }
     }
     
     @Override
     public void run() {
         in.start();
-        controller.start();
-        while (Controller.running() || !in.empty()) {
-            if (controller.requestStop()) {
-                Output.open(this);
-                setStatus(Status.OPEN);
-                Tools.sleep(2 * Controller.ELEVATOR_DOOR_TIME);
-                setStatus(controller.nextStatus());
-                Output.close(this);
-            } else {
-                setStatus(controller.nextStatus());
+        manager.start();
+        try {
+            while (Controller.running() || !in.empty()) {
+                statusLock.writeLock().lock();
+                Dir temp = manager.getDir();
+                if (temp == Dir.NULL) {
+                    status = Status.NULL;
+                    noDirection.await();
+                } else {
+                    if (temp == Dir.UP) {
+                        floor++;
+                        Output.arrive(floor);
+                    } else if (temp == Dir.DOWN) {
+                        floor--;
+                        Output.arrive(floor);
+                    }
+                    if (temp == Dir.STOP || manager.getStop()) {
+                        Output.open(this);
+                        status = Status.OPEN;
+                        doorClosed.signalAll();
+                        doorOpen.await(Controller.ELEVATOR_DOOR_TIME,
+                                TimeUnit.MILLISECONDS);
+                        status = Status.RUNNING;
+                        Output.close(this);
+                    } else {
+                        status = Status.RUNNING;
+                    }
+                    signalAll("notNull");
+                    running.await(Controller.ELEVATOR_SPEED,
+                            TimeUnit.MILLISECONDS);
+                }
             }
-            /* setStatus is only used before, so there is no problem
-             * using status. Instead of inStatus, this is intended to
-             * be more efficiency.
-             */
-            if (status == Status.NULL) {
-                continue;
-            }
-            if (Controller.DEBUG_DIRECTION) {
-                System.out.println(status);
-            }
-            if (status == Status.UP) {
-                floor++;
-            } else if (status == Status.DOWN) {
-                floor--;
-            }
+        } catch (InterruptedException e) {
             if (Controller.DEBUG) {
-                System.out.println(">>>Elevator #"
-                        + getNum() + " going " + status + " to " + floor);
+                e.printStackTrace();
             }
-            Tools.sleep(Controller.ELEVATOR_SPEED);
         }
     }
     

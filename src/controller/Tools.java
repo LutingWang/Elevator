@@ -1,5 +1,7 @@
 package controller;
 
+import com.oocourse.TimableOutput;
+
 import java.util.Arrays;
 import java.util.OptionalInt;
 
@@ -35,6 +37,12 @@ public class Tools {
             if (Controller.DEBUG) {
                 e.printStackTrace();
             }
+        }
+    }
+    
+    public static void threadMonitor() {
+        if (Controller.DEBUG) {
+            System.out.println("Thread " + Thread.currentThread().getName() + " awaking");
         }
     }
 }

@@ -1,3 +1,9 @@
-2019-04-02 21:34:30     
-Check Pass!	Your input is valid, base time is 11, max time is 16
+2019-04-08  9:22:31     
+Check Pass!	Your input is valid, base time is 4, max time is 7
+ 
+2019-04-08  9:27:08     
+Check Pass!	Your input is valid, base time is 2, max time is 5
+ 
+2019-04-08 10:11:11     
+Check Pass!	Your input is valid, base time is 26, max time is 29
  

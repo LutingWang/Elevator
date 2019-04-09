@@ -1,8 +1,10 @@
 package view;
 
-import com.oocourse.elevator1.ElevatorInput;
-import com.oocourse.elevator1.PersonRequest;
+import com.oocourse.TimableOutput;
+import com.oocourse.elevator2.ElevatorInput;
+import com.oocourse.elevator2.PersonRequest;
 import controller.Controller;
+import model.Person;
 
 import java.io.IOException;
 
@@ -26,10 +28,10 @@ public class Input implements Runnable {
             if (request == null) {
                 break;
             } else {
-                Controller.newRequest(request);
+                Controller.newPerson(new Person(request));
             }
             if (Controller.DEBUG) {
-                System.out.println(">>>Input");
+                System.out.println(">>>input " + request);
             }
         }
         try {
