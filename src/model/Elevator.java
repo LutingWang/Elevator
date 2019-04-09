@@ -45,8 +45,14 @@ public class Elevator implements AutoStart {
                         statusLock.writeLock().unlock();
                     }
                 }
+                if (Controller.DEBUG) {
+                    System.out.println("people in: " + in);
+                }
                 in.getPeople(person -> person.to(floor))
                         .forEach(Output::out);
+                if (Controller.DEBUG) {
+                    System.out.println("people out: " + Controller.getOut());
+                }
                 Controller.getOut()
                         .getPeople(person -> person.from(floor))
                         .forEach(person -> {
@@ -74,14 +80,14 @@ public class Elevator implements AutoStart {
         private final RedefinableAttr<Dir> dirCache
                 = new RedefinableAttr<>(() ->  {
                     if (Controller.DEBUG) {
-                        System.out.println("dirCache: " + direction(floor));
+                        System.out.println("at " + floor + " dirCache: " + direction(floor));
                     }
                     return direction(floor);
                 });
         private final RedefinableAttr<Boolean> stopCache
                 = new RedefinableAttr<>(() -> {
                     if (Controller.DEBUG) {
-                        System.out.println("stopCache: " + stop(floorCache));
+                        System.out.println("at " + floor + " stopCache: " + stop(floorCache));
                     }
                     return stop(floorCache);
                 });
@@ -192,8 +198,10 @@ public class Elevator implements AutoStart {
         switch (conditionName) {
             case "noDirection":
                 statusLock.writeLock().lock();
-                status = Status.RUNNING;
-                noDirection.signalAll();
+                if (status == Status.NULL) {
+                    status = Status.RUNNING;
+                    noDirection.signalAll();
+                }
                 statusLock.writeLock().unlock();
                 break;
             case "notNull":

@@ -3,6 +3,7 @@ package model;
 import controller.Controller;
 import controller.Tools;
 
+import java.util.OptionalDouble;
 import java.util.OptionalInt;
 
 class Manager {
@@ -51,8 +52,9 @@ class Manager {
         if (stop(floor)) {
             return Dir.STOP;
         }
+        OptionalInt cost;
         out.getLock().readLock().lock();
-        OptionalInt costOut = out.stream()
+        cost = out.stream()
                 .mapToInt(person -> {
                     if (person.from(floor)) {
                         return person.getToFloor();
@@ -64,8 +66,15 @@ class Manager {
                 .map(Manager::floorDiffComp)
                 .reduce(Integer::sum);
         out.getLock().readLock().unlock();
+        if (cost.isPresent()) { // out still has people
+            if (cost.getAsInt() >= 0) {
+                return Dir.UP;
+            } else {
+                return Dir.DOWN;
+            }
+        }
         in.getLock().readLock().lock();
-        OptionalInt costIn = in.stream()
+        cost = in.stream()
                 .mapToInt(Person::getToFloor)
                 .filter(f -> f != floor)
                 .distinct()
@@ -73,9 +82,8 @@ class Manager {
                 .map(Manager::floorDiffComp)
                 .reduce(Integer::sum);
         in.getLock().readLock().unlock();
-        OptionalInt temp = Tools.add(costIn, costOut);
-        if (temp.isPresent()) {
-            if (temp.getAsInt() >= 0) {
+        if (cost.isPresent()) {
+            if (cost.getAsInt() >= 0) {
                 return Dir.UP;
             } else {
                 return Dir.DOWN;
