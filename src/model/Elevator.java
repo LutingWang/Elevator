@@ -181,17 +181,23 @@ public class Elevator implements AutoStart {
                 Dir temp = dirCache.cache();
                 attrLock.unlock();
                 if (temp == Dir.STOP) {
-                    statusLock.writeLock().lock();
-                    if (status == Status.NULL) {
-                        status = Status.RUNNING; // any status but null
+                    statusLock.readLock().lock();
+                    if (status == Status.OPEN) {
+                        doorClosed.signalAll();
+                    } else {
                         running.signalAll();
                         noDirection.signalAll();
-                    } else if (status == Status.RUNNING) {
-                        running.signalAll();
-                    } else { // status == Status.OPEN
-                        doorClosed.signalAll();
                     }
-                    statusLock.writeLock().unlock();
+                    //if (status == Status.NULL) {
+                    //    status = Status.RUNNING; // any status but null
+                    //    running.signalAll();
+                    //    noDirection.signalAll();
+                    //} else if (status == Status.RUNNING) {
+                    //    running.signalAll();
+                    //} else { // status == Status.OPEN
+                    //    doorClosed.signalAll();
+                    //}
+                    statusLock.readLock().unlock();
                 } else if (temp != Dir.NULL) {
                     if (temp == Dir.UP) {
                         floorCache = floor + 1;
@@ -303,17 +309,30 @@ public class Elevator implements AutoStart {
     public void run() {
         in.start();
         manager.start();
+        boolean returnFromIdle = false;
         try {
+            //statusLock.writeLock().lock();
+            //status = Status.NULL;
+            //running.await(speed, TimeUnit.MILLISECONDS);
+            //Tools.threadMonitor();
+            //if (status == Status.NULL) {
+            //    noDirection.await();
+            //    Tools.threadMonitor();
+            //}
+            //status = Status.NULL;
+            //statusLock.writeLock().unlock();
             while (isAlive()) {
                 statusLock.writeLock().lock();
+                if (!returnFromIdle) {
+                    running.await(speed, TimeUnit.MILLISECONDS);
+                }
+                returnFromIdle = false;
                 Dir temp = manager.getDir();
                 if (temp == Dir.NULL) {
                     status = Status.NULL;
-                    running.await(speed, TimeUnit.MILLISECONDS);
-                    if (status == Status.NULL) {
-                        noDirection.await();
-                    }
-                    status = Status.NULL;
+                    noDirection.await();
+                    Tools.threadMonitor();
+                    returnFromIdle = true;
                 } else {
                     if (temp == Dir.UP) {
                         floor++;
@@ -334,7 +353,6 @@ public class Elevator implements AutoStart {
                         status = Status.RUNNING;
                     }
                     signalAll("notNull");
-                    running.await(speed, TimeUnit.MILLISECONDS);
                 }
             }
         } catch (InterruptedException e) {

@@ -18,6 +18,17 @@ public class Controller {
     public static final boolean DEBUG = false; // TODO: turn off
     public static final boolean DEBUG_REDIR_OUTPUT = DEBUG && false;
     
+    static {
+        if (DEBUG_REDIR_OUTPUT) {
+            try {
+                System.setOut(new PrintStream(
+                        new FileOutputStream("./out.txt")));
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+    
     public static final List<Integer> FLOORS = Arrays.asList(-3, -2, -1, 1,
             2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20);
     public static final int TOTAL_FLOORS = FLOORS.size();
@@ -71,14 +82,6 @@ public class Controller {
         Output.init();
         Thread.currentThread()
                 .setUncaughtExceptionHandler(AutoStart.eh);
-        if (DEBUG_REDIR_OUTPUT) {
-            try {
-                System.setOut(new PrintStream(
-                        new FileOutputStream("./out.txt")));
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            }
-        }
     
         // starting threads
         for (int i = 0; i < ELEVATOR_NUM; i++) {
