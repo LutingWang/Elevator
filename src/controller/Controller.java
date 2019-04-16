@@ -68,6 +68,7 @@ public class Controller {
     }
     
     public static void main(String[] args) {
+        Output.init();
         Thread.currentThread()
                 .setUncaughtExceptionHandler(AutoStart.eh);
         if (DEBUG_REDIR_OUTPUT) {
@@ -85,7 +86,6 @@ public class Controller {
                     ELEVATOR_FLOORS.get(i), ELEVATOR_VOLUME[i]).start();
         }
         Manager.init();
-        Output.init();
         Input.getInstance().start();
     }
 }
