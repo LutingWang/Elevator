@@ -60,7 +60,8 @@ public class Elevator implements AutoStart {
                 }
                 Manager.getLock().lock();
                 getPeople(floor).forEach(Person::getOut); // in
-                out.getPeople(floor).forEach(person -> person.getIn(Elevator.this));
+                out.getPeople(floor).forEach(person ->
+                        person.getIn(Elevator.this));
                 Manager.getLock().unlock();
                 statusLock.readLock().unlock();
                 manager.refresh();
@@ -258,7 +259,7 @@ public class Elevator implements AutoStart {
         return name;
     }
     
-    public int getSpeed() {
+    int getSpeed() {
         return speed;
     }
     
@@ -266,15 +267,15 @@ public class Elevator implements AutoStart {
         return floor;
     }
     
-    public People getPeopleIn() {
+    People getPeopleIn() {
         return in;
     }
     
-    public People getPeopleOut() {
+    People getPeopleOut() {
         return out;
     }
     
-    public boolean canStop(int floor) {
+    boolean canStop(int floor) {
         return floors.contains(floor);
     }
     

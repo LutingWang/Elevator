@@ -17,19 +17,19 @@ public class Person extends PersonRequest {
         floor = getFromFloor();
     }
     
-    public int getFloor() {
+    int getFloor() {
         return floor;
     }
     
-    public void cacheFloor(int floor) {
+    void cacheFloor(int floor) {
         floorCache = floor;
     }
     
-    public boolean call(int floor) {
+    boolean call(int floor) {
         return this.floor == floor;
     }
 
-    public void getIn(Elevator elevator) {
+    void getIn(Elevator elevator) {
         if (elevator.getPeopleIn().addPerson(this)) {
             Output.in(this, elevator);
             floor = floorCache;
@@ -39,7 +39,7 @@ public class Person extends PersonRequest {
         }
     }
     
-    public void getOut() {
+    void getOut() {
         Output.out(this, elevator);
         if (floor != getToFloor()) {
             elevator = null;

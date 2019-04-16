@@ -2,31 +2,31 @@ package model;
 
 import java.util.function.Supplier;
 
-public class RedefinableAttr<T> {
+class RedefinableAttr<T> {
     private T attr = null;
     private final Supplier<T> supplier;
     
-    public RedefinableAttr(Supplier<T> supplier) {
+    RedefinableAttr(Supplier<T> supplier) {
         this.supplier = supplier;
     }
     
-    public T cache() {
+    T cache() {
         attr = supplier.get();
         return attr;
     }
     
-    public boolean isPresent() {
+    boolean isPresent() {
         return attr != null;
     }
     
-    public T peek() {
+    T peek() {
         if (attr == null) {
             attr = supplier.get();
         }
         return attr;
     }
     
-    public T get() {
+    T get() {
         if (attr == null) {
             return supplier.get();
         }

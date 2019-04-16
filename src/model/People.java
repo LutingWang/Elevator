@@ -1,7 +1,5 @@
 package model;
 
-import model.Person;
-
 import java.util.ArrayList;
 import java.util.ListIterator;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -11,11 +9,11 @@ public class People {
     private final ArrayList<Person> people = new ArrayList<>();
     private final ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
     
-    public ReentrantReadWriteLock getLock() {
+    ReentrantReadWriteLock getLock() {
         return lock;
     }
     
-    public ArrayList<Person> getPeople() {
+    ArrayList<Person> getPeople() {
         lock.readLock().lock();
         try {
             return people;
@@ -24,15 +22,7 @@ public class People {
         }
     }
     
-    public int size() {
-        return people.size();
-    }
-    
-    public Stream<Person> stream() {
-        return people.stream();
-    }
-    
-    public ArrayList<Person> getPeople(int floor) {
+    ArrayList<Person> getPeople(int floor) {
         ArrayList<Person> result = new ArrayList<>();
         Person person;
         lock.writeLock().lock();
@@ -51,6 +41,14 @@ public class People {
         }
     }
     
+    int size() {
+        return people.size();
+    }
+    
+    Stream<Person> stream() {
+        return people.stream();
+    }
+    
     public boolean addPerson(Person person) {
         lock.writeLock().lock();
         try {
@@ -61,7 +59,7 @@ public class People {
         return true;
     }
     
-    public boolean isEmpty() {
+    boolean isEmpty() {
         lock.readLock().lock();
         try {
             return people.size() == 0;

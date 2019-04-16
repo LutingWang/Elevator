@@ -14,7 +14,7 @@ public class Manager {
     private static ReentrantLock lock = new ReentrantLock();
     private static final int[][] path = new int[TOTAL_FLOORS][TOTAL_FLOORS];
     
-    public static ReentrantLock getLock() {
+    static ReentrantLock getLock() {
         return lock;
     }
     
@@ -49,7 +49,8 @@ public class Manager {
                 int ind1 = i * TOTAL_FLOORS + j;
                 for (int k = 0; k < j; k++) {
                     int ind2 = i * TOTAL_FLOORS + k;
-                    graph[ind1][ind2] = Elevator.elevators.get(i).getSpeed() * (j - k);
+                    graph[ind1][ind2] = Elevator.elevators.get(i).getSpeed()
+                            * (j - k);
                     graph[ind2][ind1] = graph[ind1][ind2];
                 }
             }
@@ -66,7 +67,8 @@ public class Manager {
         }
         for (int i = ELEVATOR_NUM * TOTAL_FLOORS; i < size; i++) {
             for (int j = ELEVATOR_NUM * TOTAL_FLOORS; j < size; j++) {
-                Manager.path[i - ELEVATOR_NUM * TOTAL_FLOORS][j - ELEVATOR_NUM * TOTAL_FLOORS] = path[i][j];
+                Manager.path[i - ELEVATOR_NUM * TOTAL_FLOORS]
+                        [j - ELEVATOR_NUM * TOTAL_FLOORS] = path[i][j];
             }
         }
     }
@@ -75,7 +77,8 @@ public class Manager {
         ArrayList<Person> temp = new ArrayList<>();
         temp.addAll(elevator.getPeopleIn().getPeople());
         temp.addAll(elevator.getPeopleOut().getPeople());
-        return temp.stream().map(Person::getFloor).distinct().collect(Collectors.toList());
+        return temp.stream()
+                .map(Person::getFloor).distinct().collect(Collectors.toList());
     }
     
     public static void arrangePerson(Person person) {
