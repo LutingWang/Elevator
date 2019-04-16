@@ -24,6 +24,13 @@ public class Input implements AutoStart {
     @Override
     public void run() {
         ElevatorInput elevatorInput = new ElevatorInput();
+        try {
+            Thread.sleep(100);
+        } catch (InterruptedException e) {
+            if (Controller.DEBUG) {
+                e.printStackTrace();
+            }
+        }
         while (true) {
             PersonRequest request = elevatorInput.nextPersonRequest();
             if (request == null) {
