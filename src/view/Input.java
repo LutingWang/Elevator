@@ -1,8 +1,9 @@
 package view;
 
 import com.oocourse.TimableOutput;
-import com.oocourse.elevator2.ElevatorInput;
-import com.oocourse.elevator2.PersonRequest;
+import com.oocourse.elevator3.ElevatorInput;
+import com.oocourse.elevator3.PersonRequest;
+import controller.AutoStart;
 import controller.Controller;
 import model.Person;
 
@@ -11,7 +12,7 @@ import java.io.IOException;
 /**
  * Singleton pattern
  */
-public class Input implements Runnable {
+public class Input implements AutoStart {
     private static Input instance = new Input();
     
     private Input() {}
@@ -40,5 +41,10 @@ public class Input implements Runnable {
             e.printStackTrace();
         }
         Controller.setInputAlive(false);
+    }
+    
+    @Override
+    public String getThreadName() {
+        return "input";
     }
 }

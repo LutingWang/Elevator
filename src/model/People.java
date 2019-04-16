@@ -1,9 +1,10 @@
 package model;
 
+import model.Person;
+
 import java.util.ArrayList;
 import java.util.ListIterator;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 public class People {
@@ -14,21 +15,34 @@ public class People {
         return lock;
     }
     
-    Stream<Person> stream() {
+    public ArrayList<Person> getPeople() {
+        lock.readLock().lock();
+        try {
+            return people;
+        } finally {
+            lock.readLock().unlock();
+        }
+    }
+    
+    public int size() {
+        return people.size();
+    }
+    
+    public Stream<Person> stream() {
         return people.stream();
     }
     
-    ArrayList<Person> getPeople(Predicate<Person> fun) {
+    public ArrayList<Person> getPeople(int floor) {
         ArrayList<Person> result = new ArrayList<>();
-        Person pr;
+        Person person;
         lock.writeLock().lock();
         try {
             ListIterator<Person> li = people.listIterator();
             while (li.hasNext()) {
-                pr = li.next();
-                if (fun.test(pr)) {
+                person = li.next();
+                if (person.call(floor)) {
                     li.remove();
-                    result.add(pr);
+                    result.add(person);
                 }
             }
             return result;
@@ -37,16 +51,17 @@ public class People {
         }
     }
     
-    public void addPerson(Person person) {
+    public boolean addPerson(Person person) {
         lock.writeLock().lock();
         try {
             people.add(person);
         } finally {
             lock.writeLock().unlock();
         }
+        return true;
     }
     
-    public boolean empty() {
+    public boolean isEmpty() {
         lock.readLock().lock();
         try {
             return people.size() == 0;

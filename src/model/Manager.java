@@ -1,88 +1,94 @@
 package model;
 
 import controller.Controller;
-import controller.Tools;
 
-import java.util.OptionalInt;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
-class Manager {
-    private static final People out = Controller.getOut();
-    private final People in;
+import static controller.Controller.ELEVATOR_NUM;
+import static controller.Controller.TOTAL_FLOORS;
+
+public class Manager {
+    private static ReentrantLock lock = new ReentrantLock();
+    private static final int[][] path = new int[TOTAL_FLOORS][TOTAL_FLOORS];
     
-    Manager(People in) {
-        this.in = in;
+    public static ReentrantLock getLock() {
+        return lock;
     }
     
-    private static int floorDiffComp(int floorDiff) {
-        if (floorDiff > 0) {
-            return Controller.TOTAL_FLOORS - floorDiff;
-        } else if (floorDiff < 0) {
-            return -Controller.TOTAL_FLOORS - floorDiff;
-        } else {
-            if (Controller.DEBUG) {
-                throw new RuntimeException();
-            } else {
-                return 0;
+    public static void init() {
+        int inf = Integer.MAX_VALUE / 4;
+        int size = (ELEVATOR_NUM + 1) * TOTAL_FLOORS;
+        int[][] graph = new int[size][size];
+        int[][] path = new int[size][size];
+        // e0f0, e0f1, ... , e0fn, e1f0, ... , emfn, of0, ... , ofn
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                if (i == j) {
+                    graph[i][j] = 0;
+                } else {
+                    graph[i][j] = inf;
+                }
+                path[i][j] = -1;
             }
         }
-    }
-    
-    boolean stop(int floor) {
-        out.getLock().readLock().lock();
-        try {
-            if (out
-                    .stream()
-                    .anyMatch(person -> person.from(floor))) {
-                return true;
+        for (int i = 0; i < TOTAL_FLOORS; i++) {
+            int ind1 = ELEVATOR_NUM * TOTAL_FLOORS + i;
+            for (int j = 0; j < ELEVATOR_NUM; j++) {
+                if (Elevator.elevators.get(j).canStop(i)) {
+                    int ind2 = j * TOTAL_FLOORS + i;
+                    graph[ind1][ind2] = Controller.ELEVATOR_DOOR_TIME;
+                    graph[ind2][ind1] = Controller.ELEVATOR_DOOR_TIME;
+                }
             }
-        } finally {
-            out.getLock().readLock().unlock();
         }
-        in.getLock().readLock().lock();
-        try {
-            return in.stream()
-                    .anyMatch(person -> person.to(floor));
-        } finally {
-            in.getLock().readLock().unlock();
+        for (int i = 0; i < ELEVATOR_NUM; i++) {
+            for (int j = 0; j < TOTAL_FLOORS; j++) {
+                int ind1 = i * TOTAL_FLOORS + j;
+                for (int k = 0; k < j; k++) {
+                    int ind2 = i * TOTAL_FLOORS + k;
+                    graph[ind1][ind2] = Elevator.elevators.get(i).getSpeed() * (j - k);
+                    graph[ind2][ind1] = graph[ind1][ind2];
+                }
+            }
         }
-    }
-    
-    Dir direction(int floor) {
-        if (stop(floor)) {
-            return Dir.STOP;
-        }
-        OptionalInt cost;
-        out.getLock().readLock().lock();
-        cost = out.stream()
-                .mapToInt(person -> {
-                    if (person.from(floor)) {
-                        return person.getToFloor();
+        for (int k = 0; k < size; k++) {
+            for (int i = 0; i < size; i++) {
+                for (int j = 0; j < size; j++) {
+                    if (graph[i][j] > graph[i][k] + graph[k][j]) {
+                        graph[i][j] = graph[i][k] + graph[k][j];
+                        path[i][j] = k;
                     }
-                    return person.getFromFloor();
-                })
-                .distinct()
-                .map(f -> f - floor)
-                .map(Manager::floorDiffComp)
-                .reduce(Integer::sum);
-        out.getLock().readLock().unlock();
-        cost = Tools.mult(cost, Controller.OUT_AMPL);
-        in.getLock().readLock().lock();
-        cost = Tools.add(cost, in.stream()
-                .mapToInt(Person::getToFloor)
-                .filter(f -> f != floor)
-                .distinct()
-                .map(f -> f - floor)
-                .map(Manager::floorDiffComp)
-                .reduce(Integer::sum));
-        in.getLock().readLock().unlock();
-        if (cost.isPresent()) {
-            if (cost.getAsInt() >= 0) {
-                return Dir.UP;
-            } else {
-                return Dir.DOWN;
+                }
             }
-        } else {
-            return Dir.NULL;
         }
+        for (int i = ELEVATOR_NUM * TOTAL_FLOORS; i < size; i++) {
+            for (int j = ELEVATOR_NUM * TOTAL_FLOORS; j < size; j++) {
+                Manager.path[i - ELEVATOR_NUM * TOTAL_FLOORS][j - ELEVATOR_NUM * TOTAL_FLOORS] = path[i][j];
+            }
+        }
+    }
+    
+    static List<Integer> stopFloors(Elevator elevator) {
+        ArrayList<Person> temp = new ArrayList<>();
+        temp.addAll(elevator.getPeopleIn().getPeople());
+        temp.addAll(elevator.getPeopleOut().getPeople());
+        return temp.stream().map(Person::getFloor).distinct().collect(Collectors.toList());
+    }
+    
+    public static void arrangePerson(Person person) {
+        int index = path[person.getFloor()][person.getToFloor()];
+        int floor = index % TOTAL_FLOORS;
+        if (index >= ELEVATOR_NUM * TOTAL_FLOORS) {
+            index = path[person.getFloor()][index % TOTAL_FLOORS];
+        } else {
+            floor = person.getToFloor();
+        }
+        Elevator elevator = Elevator.elevators.get(index / TOTAL_FLOORS);
+        person.cacheFloor(floor);
+        elevator.getPeopleOut().addPerson(person);
+        elevator.signalAll("notNull");
     }
 }

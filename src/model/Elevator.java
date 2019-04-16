@@ -2,11 +2,11 @@ package model;
 
 import controller.AutoStart;
 import controller.Controller;
-import controller.MyExceptionHandler;
 import controller.Tools;
 import view.Output;
 
 import java.util.ArrayList;
+import java.util.OptionalInt;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -15,16 +15,29 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 public class Elevator implements AutoStart {
     public static final ArrayList<Elevator> elevators = new ArrayList<>();
     
-    private int floor = Controller.ELEVATOR_INIT_POS;
-    private Status status = Status.NULL;
-    private final ReentrantReadWriteLock statusLock
-            = new ReentrantReadWriteLock();
-    private final Condition doorClosed = statusLock.writeLock().newCondition();
-    private final Condition doorOpen = statusLock.writeLock().newCondition();
-    private final Condition noDirection = statusLock.writeLock().newCondition();
-    private final Condition running = statusLock.writeLock().newCondition();
+    private enum Status { OPEN, NULL, RUNNING }
+    
+    private enum Dir { STOP, UP, DOWN, NULL }
     
     private final class PeopleIn extends People implements AutoStart {
+        private final int volume;
+        
+        PeopleIn(int volume) {
+            this.volume = volume;
+        }
+        
+        boolean full() {
+            return size() >= volume;
+        }
+        
+        @Override
+        public boolean addPerson(Person person) {
+            if (full()) {
+                return false;
+            }
+            return super.addPerson(person);
+        }
+        
         @Override
         public void run() {
             while (true) {
@@ -45,60 +58,34 @@ public class Elevator implements AutoStart {
                         statusLock.writeLock().unlock();
                     }
                 }
-                if (Controller.DEBUG) {
-                    System.out.println("people in: " + in);
-                }
-                in.getPeople(person -> person.to(floor))
-                        .forEach(Output::out);
-                if (Controller.DEBUG) {
-                    System.out.println("people out: " + Controller.getOut());
-                }
-                Controller.getOut()
-                        .getPeople(person -> person.from(floor))
-                        .forEach(person -> {
-                            Output.in(person);
-                            in.addPerson(person);
-                        });
+                Manager.getLock().lock();
+                getPeople(floor).forEach(Person::getOut); // in
+                out.getPeople(floor).forEach(person -> person.getIn(Elevator.this));
+                Manager.getLock().unlock();
                 statusLock.readLock().unlock();
                 manager.refresh();
             }
         }
         
-        public Thread start() {
-            Thread thread = new Thread(this, "people in " + getName());
-            thread.setUncaughtExceptionHandler(new MyExceptionHandler());
-            thread.setDaemon(true);
-            thread.start();
-            return thread;
+        @Override
+        public String getThreadName() {
+            return "people in " + getName();
+        }
+        
+        @Override
+        public boolean isDeamon() {
+            return true;
         }
     }
-    
-    private final PeopleIn in = new PeopleIn();
     
     private final class SubManager extends Manager implements AutoStart {
         private int floorCache = floor;
         private final RedefinableAttr<Dir> dirCache
-                = new RedefinableAttr<>(() ->  {
-                    if (Controller.DEBUG) {
-                        System.out.println("at " + floor
-                                + " dirCache: " + direction(floor));
-                    }
-                    return direction(floor);
-                });
+                = new RedefinableAttr<>(this::direction);
         private final RedefinableAttr<Boolean> stopCache
-                = new RedefinableAttr<>(() -> {
-                    if (Controller.DEBUG) {
-                        System.out.println("at " + floor
-                                + " stopCache: " + stop(floorCache));
-                    }
-                    return stop(floorCache);
-                });
+                = new RedefinableAttr<>(this::stop);
         private final ReentrantLock attrLock = new ReentrantLock();
         private final Condition notNull = attrLock.newCondition();
-        
-        SubManager() {
-            super(in);
-        }
         
         Dir getDir() {
             attrLock.lock();
@@ -126,6 +113,54 @@ public class Elevator implements AutoStart {
             } finally {
                 attrLock.unlock();
             }
+        }
+    
+        Dir direction() {
+            if (stop(floor)) {
+                return Dir.STOP;
+            }
+            OptionalInt optionalInt = stopFloors(Elevator.this)
+                    .stream()
+                    .mapToInt(x -> x)
+                    .filter(floor -> floor != Elevator.this.floor)
+                    .max();
+            if (optionalInt.isPresent()) {
+                if (optionalInt.getAsInt() > floor) {
+                    return Dir.UP;
+                } else {
+                    return Dir.DOWN;
+                }
+            } else {
+                return Dir.NULL;
+            }
+        }
+        
+        boolean stop(int floor) {
+            if (!floors.contains(floor)) {
+                return false;
+            }
+            if (!in.full()) {
+                out.getLock().readLock().lock();
+                try {
+                    if (out.stream()
+                            .anyMatch(person -> person.call(floor))) {
+                        return true;
+                    }
+                } finally {
+                    out.getLock().readLock().unlock();
+                }
+            }
+            in.getLock().readLock().lock();
+            try {
+                return in.stream()
+                        .anyMatch(person -> person.call(floor));
+            } finally {
+                in.getLock().readLock().unlock();
+            }
+        }
+    
+        Boolean stop() {
+            return stop(floorCache);
         }
         
         @Override
@@ -171,29 +206,76 @@ public class Elevator implements AutoStart {
                 attrLock.unlock();
             }
         }
-    
+        
         @Override
-        public Thread start() {
-            Thread thread = new Thread(this, "sub-manager " + getName());
-            thread.setUncaughtExceptionHandler(new MyExceptionHandler());
-            thread.setDaemon(true);
-            thread.start();
-            return thread;
+        public String getThreadName() {
+            return "sub-manager " + getName();
+        }
+        
+        @Override
+        public boolean isDeamon() {
+            return true;
         }
     }
     
+    private final String name;
+    private final int speed;
+    private final ArrayList<Integer> floors;
+    
+    private int floor = Controller.ELEVATOR_INIT_POS;
+    private Status status = Status.NULL;
+    private final ReentrantReadWriteLock statusLock
+            = new ReentrantReadWriteLock();
+    private final Condition doorClosed = statusLock.writeLock().newCondition();
+    private final Condition doorOpen = statusLock.writeLock().newCondition();
+    private final Condition noDirection = statusLock.writeLock().newCondition();
+    private final Condition running = statusLock.writeLock().newCondition();
+    
+    private final PeopleIn in;
+    private final People out = new People();
     private final SubManager manager = new SubManager();
     
-    public Elevator() {
-        elevators.add(this);
+    private static boolean isAlive() {
+        boolean temp = Controller.isInputAlive();
+        Manager.getLock().lock();
+        for (Elevator elevator : elevators) {
+            temp = temp || !elevator.in.isEmpty() || !elevator.out.isEmpty();
+        }
+        Manager.getLock().unlock();
+        return temp;
     }
     
-    private String getName() {
-        return "elevator #" + elevators.indexOf(this);
+    public Elevator(String name, int speed,
+                    ArrayList<Integer> floors, int volume) {
+        elevators.add(this);
+        this.name = name;
+        this.speed = speed;
+        this.floors = floors;
+        this.in = new PeopleIn(volume);
+    }
+    
+    public String getName() {
+        return name;
+    }
+    
+    public int getSpeed() {
+        return speed;
     }
     
     public int getFloor() {
         return floor;
+    }
+    
+    public People getPeopleIn() {
+        return in;
+    }
+    
+    public People getPeopleOut() {
+        return out;
+    }
+    
+    public boolean canStop(int floor) {
+        return floors.contains(floor);
     }
     
     public void signalAll(String conditionName) {
@@ -221,13 +303,12 @@ public class Elevator implements AutoStart {
         in.start();
         manager.start();
         try {
-            while (Controller.running() || !in.empty()) {
+            while (isAlive()) {
                 statusLock.writeLock().lock();
                 Dir temp = manager.getDir();
                 if (temp == Dir.NULL) {
                     status = Status.NULL;
-                    running.await(Controller.ELEVATOR_SPEED,
-                            TimeUnit.MILLISECONDS);
+                    running.await(speed, TimeUnit.MILLISECONDS);
                     if (status == Status.NULL) {
                         noDirection.await();
                     }
@@ -235,10 +316,10 @@ public class Elevator implements AutoStart {
                 } else {
                     if (temp == Dir.UP) {
                         floor++;
-                        Output.arrive(floor);
+                        Output.arrive(this);
                     } else if (temp == Dir.DOWN) {
                         floor--;
-                        Output.arrive(floor);
+                        Output.arrive(this);
                     }
                     if (temp == Dir.STOP || manager.getStop()) {
                         Output.open(this);
@@ -252,8 +333,7 @@ public class Elevator implements AutoStart {
                         status = Status.RUNNING;
                     }
                     signalAll("notNull");
-                    running.await(Controller.ELEVATOR_SPEED,
-                            TimeUnit.MILLISECONDS);
+                    running.await(speed, TimeUnit.MILLISECONDS);
                 }
             }
         } catch (InterruptedException e) {
@@ -261,13 +341,11 @@ public class Elevator implements AutoStart {
                 e.printStackTrace();
             }
         }
+        System.exit(0);
     }
     
     @Override
-    public Thread start() {
-        Thread thread = new Thread(this, getName());
-        thread.setUncaughtExceptionHandler(new MyExceptionHandler());
-        thread.start();
-        return thread;
+    public String getThreadName() {
+        return "elevator " + getName();
     }
 }

@@ -1,54 +1,54 @@
 package model;
 
-import com.oocourse.elevator2.PersonRequest;
+import com.oocourse.elevator3.PersonRequest;
+import view.Output;
 
 import static controller.Controller.FLOORS;
 
-public class Person {
-    private PersonRequest pr;
-    private int fromFloor;
-    private int toFloor;
-    private int personId;
+public class Person extends PersonRequest {
+    private int floor; // cur floor or cur dst
+    private int floorCache;
+    
+    private Elevator elevator = null;
     
     public Person(PersonRequest pr) {
-        this.pr = pr;
-        fromFloor = FLOORS.indexOf(pr.getFromFloor());
-        toFloor = FLOORS.indexOf(pr.getToFloor());
-        personId = pr.getPersonId();
+        super(FLOORS.indexOf(pr.getFromFloor()),
+                FLOORS.indexOf(pr.getToFloor()), pr.getPersonId());
+        floor = getFromFloor();
     }
     
-    public int getFromFloor() {
-        return fromFloor;
+    public int getFloor() {
+        return floor;
     }
     
-    boolean from(int floor) {
-        return fromFloor == floor;
+    public void cacheFloor(int floor) {
+        floorCache = floor;
     }
     
-    public int getToFloor() {
-        return toFloor;
+    public boolean call(int floor) {
+        return this.floor == floor;
+    }
+
+    public void getIn(Elevator elevator) {
+        if (elevator.getPeopleIn().addPerson(this)) {
+            Output.in(this, elevator);
+            floor = floorCache;
+            this.elevator = elevator;
+        } else {
+            Manager.arrangePerson(this);
+        }
     }
     
-    boolean to(int floor) {
-        return toFloor == floor;
-    }
-    
-    public int getPersonId() {
-        return personId;
-    }
-    
-    @Override
-    public boolean equals(Object obj) {
-        return pr.equals(obj);
-    }
-    
-    @Override
-    public int hashCode() {
-        return pr.hashCode();
+    public void getOut() {
+        Output.out(this, elevator);
+        if (floor != getToFloor()) {
+            elevator = null;
+            Manager.arrangePerson(this);
+        }
     }
     
     @Override
     public String toString() {
-        return pr.toString();
+        return super.toString() + "-CALL-" + floor + "-CACHING-" + floorCache;
     }
 }
