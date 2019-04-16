@@ -1,9 +1,11 @@
 package controller;
 
+import com.oocourse.TimableOutput;
+
 public class Tools {
     public static void threadMonitor() {
         if (Controller.DEBUG) {
-            System.out.println("Thread " +
+            TimableOutput.println("Thread " +
                     Thread.currentThread().getName() + " awaking");
         }
     }
