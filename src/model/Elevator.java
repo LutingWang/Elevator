@@ -240,7 +240,8 @@ public class Elevator implements AutoStart {
         boolean temp = Controller.isInputAlive();
         Manager.getLock().lock();
         for (Elevator elevator : elevators) {
-            temp = temp || !elevator.in.isEmpty() || !elevator.out.isEmpty();
+            temp = temp || !elevator.in.isEmpty() || !elevator.out.isEmpty()
+                    || elevator.status == Status.OPEN;
         }
         Manager.getLock().unlock();
         return temp;
