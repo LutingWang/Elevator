@@ -120,7 +120,7 @@ public class Elevator implements AutoStart {
             if (stop(floor)) {
                 return Dir.STOP;
             }
-            OptionalInt optionalInt = stopFloors(Elevator.this)
+            OptionalInt optionalInt = stopFloors(Elevator.this, !in.full())
                     .stream()
                     .mapToInt(x -> x)
                     .filter(floor -> floor != Elevator.this.floor)
