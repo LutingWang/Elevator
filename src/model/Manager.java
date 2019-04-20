@@ -73,10 +73,12 @@ public class Manager {
         }
     }
     
-    static List<Integer> stopFloors(Elevator elevator, boolean o) {
-        ArrayList<Person> temp = new ArrayList<>();
-        temp.addAll(elevator.getPeopleIn().getPeople());
-        if (o) { temp.addAll(elevator.getPeopleOut().getPeople()); }
+    static List<Integer> stopFloors(Elevator elevator, boolean considerOut) {
+        ArrayList<Person> temp = new ArrayList<>(
+                elevator.getPeopleIn().getPeople());
+        if (considerOut) {
+            temp.addAll(elevator.getPeopleOut().getPeople());
+        }
         return temp.stream()
                 .map(Person::getFloor).distinct().collect(Collectors.toList());
     }

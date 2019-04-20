@@ -1,0 +1,39 @@
+2019-04-08  9:22:31     
+Check Pass!	Your input is valid, base time is 4, max time is 7
+ 
+2019-04-08  9:27:08     
+Check Pass!	Your input is valid, base time is 2, max time is 5
+ 
+2019-04-08 10:11:11     
+Check Pass!	Your input is valid, base time is 26, max time is 29
+ 
+2019-04-09 19:47:03     
+Check Pass!	Your input is valid, base time is 17, max time is 20
+ 
+2019-04-09 20:27:59     
+Check Pass!	Your input is valid, base time is 9, max time is 12
+ 
+2019-04-09 20:33:55     
+Check Pass!	Your input is valid, base time is 7, max time is 10
+ 
+2019-04-09 20:39:09     
+Check Pass!	Your input is valid, base time is 13, max time is 16
+ 
+2019-04-09 21:29:54     
+Check Pass!	Your input is valid, base time is 5, max time is 8
+ 
+2019-04-11 23:40:49     
+Check Pass!	Your input is valid, base time is 24, max time is 27
+ 
+2019-04-16 13:59:11     
+Check Pass!	Your input is valid, base time is 24, max time is 27
+ 
+2019-04-16 15:23:45     
+Check Pass!	Your input is valid, base time is 4, max time is 7
+ 
+2019-04-16 21:09:30     
+Check Fail!	Request floor out of range: [0.0]2-FROM-1-TO-17
+ 
+2019-04-16 21:11:39     
+Check Fail!	Request floor out of range: [0.0]1-FROM-1-TO-16
+ 
